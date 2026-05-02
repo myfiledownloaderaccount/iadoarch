@@ -1,41 +1,34 @@
 import internetarchive as ia
 import json
-import random
 import os
+import shutil
 
-MAX_SIZE_GB = 0.9  
-config = {
-    "collections": ["twitter-social-media-video", "facebook-social-video", "instagram-video-collection", "mirrortube", "reddit-social-media-video", "vice-video-mirror", "Arkive", "adultswimstreams", "odysee-social-media-video", "tiktoks"],
-    "count_per_collection": 1,
-    "download_dir": "downloads"
-}
+with open('config.json', 'r') as f:
+    config = json.load(f)
 
-def get_dir_size(path):
-    total = 0
-    for dirpath, dirnames, filenames in os.walk(path):
-        for f in filenames:
-            total += os.path.getsize(os.path.join(dirpath, f))
-    return total / (1024**3) 
+search_query = config.get("search", "archive")
+count = config.get("count", 1)
+target_folder = config.get("folder", "downloads")
+
+if not os.path.exists(target_folder):
+    os.makedirs(target_folder)
 
 history = json.load(open('history.json')) if os.path.exists('history.json') else []
 
-if not os.path.exists(config['download_dir']):
-    os.makedirs(config['download_dir'])
-
 for col_id in config['collections']:
-    if get_dir_size(config['download_dir']) > MAX_SIZE_GB:
-        print("Limit reached. Stopping downloads.")
-        break
-        
-    search = ia.search_items(f'collection:{col_id}')
+    print(f"Searching for '{search_query}' in collection '{col_id}'...")
+    query = f"collection:{col_id} AND ({search_query})"
+    search = ia.search_items(query)
+    
     items = [item['identifier'] for item in search]
     new_items = [i for i in items if i not in history]
     
-    selected = random.sample(new_items, min(config['count_per_collection'], len(new_items)))
+    import random
+    selected = random.sample(new_items, min(count, len(new_items)))
     
     for identifier in selected:
-        print(f"Downloading: {identifier}")
-        ia.download(identifier, glob_pattern='*.mp4', destdir=config['download_dir'])
+        print(f"Downloading {identifier} to {target_folder}...")
+        ia.download(identifier, glob_pattern='*.mp4', destdir=target_folder)
         history.append(identifier)
 
 with open('history.json', 'w') as f:
