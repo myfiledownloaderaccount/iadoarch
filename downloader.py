@@ -14,34 +14,36 @@ target_folder = config.get("folder", "downloads")
 if not os.path.exists(target_folder):
     os.makedirs(target_folder)
 
-history = json.load(open('history.json')) if os.path.exists('history.json') else []
+history_path = 'history.json'
+history = json.load(open(history_path)) if os.path.exists(history_path) else []
 
 for col_id in config['collections']:
     print(f"Working on collection: {col_id}")
     
     try:
-        search = ia.search_items(f"collection:{col_id}", limit=20)
-        items = [item['identifier'] for item in search]
-        print(f"Found {len(items)} items in {col_id}")
-    except Exception as e:
-        print(f"Search failed for {col_id}: {e}")
-        continue
+        search = ia.search_items(f"collection:{col_id}")
         
-    selected = random.sample(items, min(config.get('count', 1), len(items)))
-    
-    for identifier in selected:
-        if identifier in history:
-            print(f"Skipping {identifier} (already in history)")
+        items = [item['identifier'] for item in search][:200]
+        
+        print(f"Found {len(items)} items in {col_id}")
+        
+        new_items = [i for i in items if i not in history]
+        if not new_items:
+            print(f"No new items in {col_id}")
             continue
             
-        print(f"Attempting download: {identifier}")
-        try:
+        selected = random.sample(new_items, min(config.get('count', 1), len(new_items)))
+        
+        for identifier in selected:
+            print(f"Attempting download: {identifier}")
             ia.download(identifier, glob_pattern='*.mp4', destdir=target_folder, verbose=False)
             history.append(identifier)
             print(f"Successfully downloaded: {identifier}")
-        except Exception as e:
-            print(f"Failed to download {identifier}: {e}")
+            
+    except Exception as e:
+        print(f"Search/Download failed for {col_id}: {str(e)}")
 
-with open('history.json', 'w') as f:
+with open(history_path, 'w') as f:
     json.dump(history, f)
+
 print("Finished.")
