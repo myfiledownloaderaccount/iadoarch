@@ -1,8 +1,15 @@
 {
-  "search": "archive",
+  "search": "",
   "collections": [
-    "twitter-social-media-video", 
-    "facebook-social-video"
+    "twitter-social-media-video",
+    "facebook-social-video", 
+    "instagram-video-collection",
+    "mirrortube",
+    "reddit-social-media-video",
+    "vice-video-mirror", "Arkive", 
+    "adultswimstreams", 
+    "odysee-social-media-video", 
+    "tiktoks"
   ],
   "count": 2,
   "folder": "my_new_downloads"
