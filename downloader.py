@@ -1,3 +1,4 @@
+import requests
 import internetarchive as ia
 import json
 import os
@@ -6,44 +7,36 @@ import sys
 
 sys.stdout.reconfigure(line_buffering=True)
 
-print("Loading config...")
 with open('config.json', 'r') as f:
     config = json.load(f)
 
-target_folder = config.get("folder", "downloads")
-if not os.path.exists(target_folder):
-    os.makedirs(target_folder)
+def get_items_from_collection(col_id):
+    url = f"https://archive.org/advancedsearch.php?q=collection:{col_id}&fl[]=identifier&rows=50&page=1&output=json"
+    try:
+        response = requests.get(url, timeout=10)
+        data = response.json()
+        return [doc['identifier'] for doc in data['response']['docs']]
+    except:
+        return []
 
-history_path = 'history.json'
-history = json.load(open(history_path)) if os.path.exists(history_path) else []
+target_folder = config.get("folder", "downloads")
+history = json.load(open('history.json')) if os.path.exists('history.json') else []
 
 for col_id in config['collections']:
-    print(f"Working on collection: {col_id}")
+    print(f"Fetching from collection: {col_id} via API...")
+    items = get_items_from_collection(col_id)
+    print(f"Found {len(items)} items.")
     
-    try:
-        search = ia.search_items(f"collection:{col_id}")
-        
-        items = [item['identifier'] for item in search][:200]
-        
-        print(f"Found {len(items)} items in {col_id}")
-        
-        new_items = [i for i in items if i not in history]
-        if not new_items:
-            print(f"No new items in {col_id}")
-            continue
-            
-        selected = random.sample(new_items, min(config.get('count', 1), len(new_items)))
-        
-        for identifier in selected:
-            print(f"Attempting download: {identifier}")
+    new_items = [i for i in items if i not in history]
+    selected = random.sample(new_items, min(config.get('count', 1), len(new_items)))
+    
+    for identifier in selected:
+        print(f"Downloading: {identifier}")
+        try:
             ia.download(identifier, glob_pattern='*.mp4', destdir=target_folder, verbose=False)
             history.append(identifier)
-            print(f"Successfully downloaded: {identifier}")
-            
-    except Exception as e:
-        print(f"Search/Download failed for {col_id}: {str(e)}")
+        except Exception as e:
+            print(f"Download failed: {e}")
 
-with open(history_path, 'w') as f:
+with open('history.json', 'w') as f:
     json.dump(history, f)
-
-print("Finished.")
