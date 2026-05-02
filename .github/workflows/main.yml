@@ -1,4 +1,4 @@
-name: Custom Archive Downloader
+name: Downloader
 on:
   push:
     paths:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  downloader:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -22,5 +22,9 @@ jobs:
           git config --global user.name "Bot"
           git config --global user.email "bot@bot.com"
           git add .
-          git commit -m "Execute: ${{ github.event.head_commit.message }}" || echo "No changes"
-          git push
+          if git diff --staged --quiet; then
+            echo "Nothing to commit"
+          else
+            git commit -m "Downloaded new videos"
+            git push
+          fi
