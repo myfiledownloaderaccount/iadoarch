@@ -1,0 +1,26 @@
+name: Custom Archive Downloader
+on:
+  push:
+    paths:
+      - 'config.json'
+  workflow_dispatch:
+
+jobs:
+  downloader:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with: {python-version: '3.9'}
+      - name: Install dependencies
+        run: pip install internetarchive
+      - name: Run Downloader
+        run: python downloader.py
+      - name: Commit and Push
+        run: |
+          git config --global user.name "Bot"
+          git config --global user.email "bot@bot.com"
+          git add .
+          git commit -m "Execute: ${{ github.event.head_commit.message }}" || echo "No changes"
+          git push
