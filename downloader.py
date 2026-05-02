@@ -1,42 +1,42 @@
 import requests
-import internetarchive as ia
 import json
 import os
 import random
 import sys
+import subprocess
 
 sys.stdout.reconfigure(line_buffering=True)
 
 with open('config.json', 'r') as f:
     config = json.load(f)
 
-def get_items_from_collection(col_id):
-    url = f"https://archive.org/advancedsearch.php?q=collection:{col_id}&fl[]=identifier&rows=50&page=1&output=json"
-    try:
-        response = requests.get(url, timeout=10)
-        data = response.json()
-        return [doc['identifier'] for doc in data['response']['docs']]
-    except:
-        return []
-
 target_folder = config.get("folder", "downloads")
+if not os.path.exists(target_folder):
+    os.makedirs(target_folder)
+
 history = json.load(open('history.json')) if os.path.exists('history.json') else []
 
 for col_id in config['collections']:
-    print(f"Fetching from collection: {col_id} via API...")
-    items = get_items_from_collection(col_id)
-    print(f"Found {len(items)} items.")
+    print(f"Fetching {col_id}...")
+    url = f"https://archive.org/advancedsearch.php?q=collection:{col_id}&fl[]=identifier&rows=20&page=1&output=json"
+    ids = [d['identifier'] for d in requests.get(url).json()['response']['docs'] if d['identifier'] not in history]
     
-    new_items = [i for i in items if i not in history]
-    selected = random.sample(new_items, min(config.get('count', 1), len(new_items)))
+    selected = random.sample(ids, min(config.get('count', 1), len(ids)))
     
     for identifier in selected:
-        print(f"Downloading: {identifier}")
-        try:
-            ia.download(identifier, glob_pattern='*.mp4', destdir=target_folder, verbose=False)
+        print(f"Downloading {identifier}...")
+        cmd = [
+            'curl', '-L', '--max-time', '60', 
+            f'https://archive.org/download/{identifier}/{identifier}.mp4', 
+            '-o', os.path.join(target_folder, f"{identifier}.mp4")
+        ]
+        res = subprocess.run(cmd)
+        
+        if res.returncode == 0:
             history.append(identifier)
-        except Exception as e:
-            print(f"Download failed: {e}")
+            print(f"Done: {identifier}")
+        else:
+            print(f"Failed to download {identifier}")
 
 with open('history.json', 'w') as f:
     json.dump(history, f)
