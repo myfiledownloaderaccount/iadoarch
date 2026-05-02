@@ -22,9 +22,5 @@ jobs:
           git config --global user.name "Bot"
           git config --global user.email "bot@bot.com"
           git add .
-          if git diff --staged --quiet; then
-            echo "Nothing to commit"
-          else
-            git commit -m "Downloaded new videos"
-            git push
-          fi
+          git commit -m "Log: $(date)"
+          git push
