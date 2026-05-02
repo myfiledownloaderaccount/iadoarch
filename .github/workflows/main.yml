@@ -16,7 +16,7 @@ jobs:
       - name: Install dependencies
         run: pip install internetarchive
       - name: Run Downloader
-        run: python downloader.py
+        run: python -u downloader.py
       - name: Commit and Push
         run: |
           git config --global user.name "Bot"
